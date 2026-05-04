@@ -1,0 +1,91 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Helpers
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    
+    // Admin checking: Admin email list (hardcoded for bootstrapping)
+    function isAdmin() { 
+      return isSignedIn() && (request.auth.token.email == 'alakesh.boruah010290@gmail.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')); 
+    }
+
+    // User Validation Helper
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role', 'createdAt']) &&
+        data.email is string && data.email.size() <= 200 &&
+        data.role is string && (data.role == 'student' || data.role == 'admin') &&
+        data.createdAt is number;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
+                    isValidUser(incoming()) && 
+                    // Prevent user from self-assigning admin unless they are the bootstrap admin
+                    (incoming().role == 'student' || (incoming().role == 'admin' && request.auth.token.email == 'alakesh.boruah010290@gmail.com'));
+      allow update: if (isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Courses
+    match /courses/{courseId} {
+      allow read: if true; // Public list
+      allow write: if isAdmin();
+    }
+
+    // Enrollments
+    function isValidEnrollment(data) {
+      return data.keys().hasAll(['userId', 'courseId', 'status', 'createdAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.courseId is string && data.courseId.size() <= 128 &&
+        data.status is string && (data.status == 'active' || data.status == 'completed' || data.status == 'pending');
+    }
+
+    match /enrollments/{enrollmentId} {
+      allow get: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(enrollmentId) && isValidEnrollment(incoming()) && 
+                    incoming().userId == request.auth.uid;
+      allow update: if (isSignedIn() && isValidEnrollment(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && isAdmin()) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Events
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Blog Posts
+    match /blog_posts/{postId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Contact Submissions
+    function isValidContact(data) {
+      return data.keys().hasAll(['name', 'email', 'message', 'createdAt']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.email is string && data.email.size() <= 200 &&
+        data.message is string && data.message.size() > 0 && data.message.size() <= 2000 &&
+        data.createdAt is number;
+    }
+
+    match /contacts/{contactId} {
+      allow read: if isAdmin();
+      allow create: if isValidId(contactId) && isValidContact(incoming());
+      allow update, delete: if isAdmin();
+    }
+  }
+}

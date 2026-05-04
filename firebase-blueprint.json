@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role-based access",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["email", "role", "createdAt"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Information about a course offering",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "classLevel": { "type": "string" },
+        "subjects": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["title", "description", "classLevel"]
+    },
+    "Enrollment": {
+      "title": "Enrollment",
+      "description": "Student enrollment in a course",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed", "pending"] },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "courseId", "status"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "School events and workshops",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["title", "date"]
+    },
+    "BlogPost": {
+      "title": "Blog Post",
+      "description": "News and blog articles",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["title", "content", "author"]
+    },
+    "ContactSubmission": {
+      "title": "Contact Submission",
+      "description": "Contact form submissions",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "email", "message"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Store users with their roles"
+    },
+    "/courses/{courseId}": {
+      "schema": { "$ref": "#/entities/Course" },
+      "description": "Publicly readable list of courses"
+    },
+    "/enrollments/{enrollmentId}": {
+      "schema": { "$ref": "#/entities/Enrollment" },
+      "description": "Student enrollments"
+    },
+    "/events/{eventId}": {
+      "schema": { "$ref": "#/entities/Event" },
+      "description": "Publicly readable events"
+    },
+    "/blog_posts/{postId}": {
+      "schema": { "$ref": "#/entities/BlogPost" },
+      "description": "Publicly readable blog posts"
+    },
+    "/contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/ContactSubmission" },
+      "description": "User generated contact messages"
+    }
+  }
+}
