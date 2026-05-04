@@ -65,8 +65,8 @@ export default function Dashboard() {
         </div>
 
         {/* Content */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid lg:grid-cols-1 gap-8">
+          <div className="space-y-6">
             <h2 className="text-2xl font-bold font-serif text-primary flex items-center gap-3">
               <BookOpen className="text-accent translate-y-[2px]" /> My Courses
             </h2>
@@ -100,30 +100,6 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-          </div>
-          
-          <div className="space-y-6">
-             <h2 className="text-2xl font-bold font-serif text-primary">Upcoming</h2>
-             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <div className="flex items-start gap-4 pb-4 border-b border-gray-50">
-                   <div className="mt-1 w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center shrink-0">
-                     <Clock size={16} />
-                   </div>
-                   <div>
-                     <h4 className="font-sans font-bold text-gray-900 text-sm">Mathematics Weekly Test</h4>
-                     <p className="font-sans text-xs text-slate-500 mt-1">Tomorrow, 10:00 AM</p>
-                   </div>
-                </div>
-                <div className="flex items-start gap-4 pt-4">
-                   <div className="mt-1 w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
-                     <BookOpen size={16} />
-                   </div>
-                   <div>
-                     <h4 className="font-sans font-bold text-gray-900 text-sm">Physics Concept Session</h4>
-                     <p className="font-sans text-xs text-slate-500 mt-1">Friday, 02:00 PM</p>
-                   </div>
-                </div>
-             </div>
           </div>
         </div>
 
