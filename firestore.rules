@@ -23,7 +23,15 @@ service cloud.firestore {
       return data.keys().hasAll(['email', 'role', 'createdAt']) &&
         data.email is string && data.email.size() <= 200 &&
         data.role is string && (data.role == 'student' || data.role == 'admin') &&
-        data.createdAt is number;
+        data.createdAt is number &&
+        (!data.keys().contains('name') || (data.name is string && data.name.size() <= 100)) &&
+        (!data.keys().contains('age') || (data.age is string || data.age is number)) &&
+        (!data.keys().contains('school') || (data.school is string && data.school.size() <= 200)) &&
+        (!data.keys().contains('standard') || (data.standard is string && data.standard.size() <= 100)) &&
+        (!data.keys().contains('phone') || (data.phone is string && data.phone.size() <= 20)) &&
+        (!data.keys().contains('parentName') || (data.parentName is string && data.parentName.size() <= 100)) &&
+        (!data.keys().contains('parentPhone') || (data.parentPhone is string && data.parentPhone.size() <= 20)) &&
+        (!data.keys().contains('photo') || (data.photo is string && data.photo.size() <= 1048576)); // 1MB limit for base64 roughly
     }
 
     match /users/{userId} {
@@ -34,7 +42,10 @@ service cloud.firestore {
                     // Prevent user from self-assigning admin unless they are the bootstrap admin
                     (incoming().role == 'student' || (incoming().role == 'admin' && request.auth.token.email == 'alakesh.boruah010290@gmail.com'));
       allow update: if (isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])) || isAdmin();
+                    incoming().diff(existing()).affectedKeys().hasOnly([
+                      'name', 'age', 'school', 'standard', 'phone', 
+                      'parentName', 'parentPhone', 'photo', 'updatedAt'
+                    ])) || isAdmin();
       allow delete: if isAdmin();
     }
 

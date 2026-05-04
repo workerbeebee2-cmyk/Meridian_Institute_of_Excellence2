@@ -8,7 +8,7 @@ import { cn } from '../lib/utils';
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { user, role, signOut } = useAuth();
+  const { user, role, profile, signOut } = useAuth();
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -65,13 +65,23 @@ export function Navigation() {
             <div className="flex items-center gap-4">
               <Link 
                 to={role === 'admin' ? '/admin' : '/dashboard'}
-                className="font-sans text-sm font-medium px-4 py-2 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors"
+                className="flex items-center gap-3 pr-2 group"
               >
-                Dashboard
+                <div className="hidden md:block text-right">
+                  <p className="text-xs font-bold font-serif text-primary leading-tight">{profile?.name || 'Student'}</p>
+                  <p className="text-[10px] font-sans text-slate-400 uppercase tracking-widest">{role}</p>
+                </div>
+                <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-accent/10 flex items-center justify-center text-accent">
+                  {profile?.photo ? (
+                    <img src={profile.photo} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="font-bold">{profile?.name?.charAt(0) || 'S'}</span>
+                  )}
+                </div>
               </Link>
               <button 
                 onClick={signOut}
-                className="font-sans text-sm font-medium transition-colors text-slate-600 hover:text-accent"
+                className="font-sans text-sm font-medium transition-colors text-slate-600 hover:text-accent border-l border-gray-100 pl-4 h-6 flex items-center"
               >
                 Sign Out
               </button>

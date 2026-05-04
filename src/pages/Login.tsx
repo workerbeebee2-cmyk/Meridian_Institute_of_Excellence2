@@ -2,7 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/AuthContext';
-import { BookOpen, UserCircle, Mail, Lock } from 'lucide-react';
+import { auth } from '../lib/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { BookOpen, UserCircle, Mail, Lock, Phone, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react';
+
+declare global {
+  interface Window {
+    recaptchaVerifier: RecaptchaVerifier | undefined;
+  }
+}
 
 export default function Login() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, user, role, loading } = useAuth();
@@ -11,24 +19,126 @@ export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  // Extra signup fields
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [school, setSchool] = useState('');
+  const [standard, setStandard] = useState('');
+  const [phone, setPhone] = useState('');
+  const [parentName, setParentName] = useState('');
+  const [parentPhone, setParentPhone] = useState('');
+
+  // OTP Verification state
+  const [otp, setOtp] = useState('');
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Cleanup recaptcha on unmount
+    return () => {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+      }
+    };
+  }, []);
+
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': () => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        }
+      });
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!phone) {
+      setError('Please enter a phone number first.');
+      return;
+    }
+    
+    setError('');
+    setIsSendingOtp(true);
+    try {
+      setupRecaptcha();
+      // Ensure phone number is in E.164 format. If not, we might need a country code.
+      // For this app, let's assume Indian numbers (+91) if no plus sign
+      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+      
+      const result = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+      setConfirmationResult(result);
+      setIsOtpSent(true);
+    } catch (err: any) {
+      console.error('Error sending OTP', err);
+      setError(err?.message || 'Failed to send OTP. Please check your phone number.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || !confirmationResult) return;
+    
+    setError('');
+    setIsVerifyingOtp(true);
+    try {
+      await confirmationResult.confirm(otp);
+      setIsPhoneVerified(true);
+      setIsOtpSent(false);
+    } catch (err: any) {
+      console.error('Error verifying OTP', err);
+      setError('Invalid OTP. Please try again.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   useEffect(() => {
     if (user && !loading) {
       if (role === 'admin') {
         navigate('/admin');
-      } else {
+      } else if (role === 'student') {
         navigate('/dashboard');
       }
     }
   }, [user, role, loading, navigate]);
 
   const handleGoogleLogin = async () => {
+    setError('');
+    // If on signup tab, validate fields first
+    if (!isLogin) {
+      if (!name || !age || !school || !standard || !phone) {
+        setError('Please fill in all required fields before continuing with Google.');
+        return;
+      }
+    }
+
     try {
-      await signInWithGoogle();
+      setIsSubmitting(true);
+      const { isNewUser } = await signInWithGoogle({
+        name, age, school, standard, phone, parentName, parentPhone
+      });
+
+      if (isNewUser) {
+        setIsLogin(false);
+        setError('Google account not found. Please complete your registration below to join Meridian.');
+        if (auth.currentUser?.displayName && !name) {
+          setName(auth.currentUser.displayName);
+        }
+      }
     } catch (err: any) {
       setError(err?.message || 'Google Sign-in failed');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -40,7 +150,14 @@ export default function Login() {
       if (isLogin) {
         await signInWithEmail(email, password);
       } else {
-        await signUpWithEmail(email, password);
+        if (!isPhoneVerified) {
+          setError('Please verify your phone number with OTP first.');
+          setIsSubmitting(false);
+          return;
+        }
+        await signUpWithEmail(email, password, {
+          name, age, school, standard, phone, parentName, parentPhone
+        });
       }
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
@@ -62,7 +179,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background-alt px-6 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-background-alt p-6 relative overflow-hidden">
       {/* Decorative blobs */}
       <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-accent/10 blur-3xl" />
       <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
@@ -70,7 +187,7 @@ export default function Login() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10 relative z-10"
+        className="w-full max-w-xl bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10 relative z-10 my-10"
       >
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-white mb-6">
@@ -93,7 +210,170 @@ export default function Login() {
         )}
 
         <form onSubmit={handleEmailSubmit} className="space-y-4 mb-6">
-          <div>
+          {!isLogin && (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="name">Full Name</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <UserCircle size={18} className="text-slate-400" />
+                  </div>
+                  <input
+                    id="name"
+                    type="text"
+                    required={!isLogin}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="age">Age</label>
+                <input
+                  id="age"
+                  type="number"
+                  required={!isLogin}
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  className="w-full px-5 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                  placeholder="Age"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="standard">Class / Standard</label>
+                <input
+                  id="standard"
+                  type="text"
+                  required={!isLogin}
+                  value={standard}
+                  onChange={(e) => setStandard(e.target.value)}
+                  className="w-full px-5 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                  placeholder="Ex: Class 10"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="school">School Name</label>
+                <input
+                  id="school"
+                  type="text"
+                  required={!isLogin}
+                  value={school}
+                  onChange={(e) => setSchool(e.target.value)}
+                  className="w-full px-5 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                  placeholder="Enter your school name"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="phone">Phone Number</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Phone size={18} className="text-slate-400" />
+                    </div>
+                    <input
+                      id="phone"
+                      type="tel"
+                      required={!isLogin}
+                      disabled={isPhoneVerified}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm disabled:bg-slate-50 disabled:text-slate-400"
+                      placeholder="Your contact number"
+                    />
+                  </div>
+                  {!isPhoneVerified && !isOtpSent && (
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={isSendingOtp || !phone}
+                      className="px-6 py-3 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-full hover:bg-primary/90 transition-all disabled:opacity-50"
+                    >
+                      {isSendingOtp ? 'Sending...' : 'Send OTP'}
+                    </button>
+                  )}
+                  {isPhoneVerified && (
+                    <div className="flex items-center gap-2 text-emerald-600 px-4">
+                      <CheckCircle2 size={24} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {isOtpSent && !isPhoneVerified && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="md:col-span-2 bg-slate-50 p-4 rounded-2xl border border-primary/10"
+                >
+                  <label className="block text-xs font-bold uppercase tracking-widest text-primary mb-3 text-center">Enter Verification Code</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="6-digit OTP"
+                      className="flex-1 px-5 py-3 rounded-full border border-gray-200 bg-white focus:ring-2 focus:ring-primary/20 outline-none text-center tracking-[0.5em] font-bold text-lg"
+                      maxLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={isVerifyingOtp || otp.length < 6}
+                      className="px-8 py-3 bg-accent text-white rounded-full font-bold hover:bg-accent/90 transition-all disabled:opacity-50 flex items-center justify-center min-w-[120px]"
+                    >
+                      {isVerifyingOtp ? <Loader2 size={20} className="animate-spin" /> : 'Verify'}
+                    </button>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsOtpSent(false)}
+                    className="w-full text-center text-xs text-slate-400 mt-3 hover:text-primary transition-colors"
+                  >
+                    Change phone number
+                  </button>
+                </motion.div>
+              )}
+
+              {/* Hidden container for ReCAPTCHA */}
+              <div id="recaptcha-container"></div>
+
+              <div className="md:col-span-2 border-t border-gray-100 pt-4 mt-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 ml-1">Parent Information (Optional)</h3>
+              </div>
+
+              <div>
+                <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="parentName">Parent's Name</label>
+                <input
+                  id="parentName"
+                  type="text"
+                  value={parentName}
+                  onChange={(e) => setParentName(e.target.value)}
+                  className="w-full px-5 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                  placeholder="Father/Mother name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="parentPhone">Parent's Phone</label>
+                <input
+                  id="parentPhone"
+                  type="tel"
+                  value={parentPhone}
+                  onChange={(e) => setParentPhone(e.target.value)}
+                  className="w-full px-5 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                  placeholder="Emergency contact"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className={!isLogin ? 'md:col-span-2' : ''}>
             <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="email">Email</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -111,7 +391,7 @@ export default function Login() {
             </div>
           </div>
           
-          <div>
+          <div className={!isLogin ? 'md:col-span-2' : ''}>
             <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="password">Password</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
