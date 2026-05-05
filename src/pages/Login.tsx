@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/AuthContext';
 import { auth } from '../lib/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { BookOpen, UserCircle, Mail, Lock, Phone, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react';
+import { BookOpen, UserCircle, Mail, Lock, Phone, CheckCircle2, ShieldCheck, Loader2, Eye } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -13,7 +13,7 @@ declare global {
 }
 
 export default function Login() {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, user, role, loading } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, completeGoogleProfile, user, role, loading, signOut, resetPassword } = useAuth();
   const navigate = useNavigate();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -26,8 +26,10 @@ export default function Login() {
   const [school, setSchool] = useState('');
   const [standard, setStandard] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneCode, setPhoneCode] = useState('+91');
   const [parentName, setParentName] = useState('');
   const [parentPhone, setParentPhone] = useState('');
+  const [parentPhoneCode, setParentPhoneCode] = useState('+91');
 
   // OTP Verification state
   const [otp, setOtp] = useState('');
@@ -38,7 +40,20 @@ export default function Login() {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const isCompletingProfile = !!(user && !role);
+
+  useEffect(() => {
+    if (isCompletingProfile && user) {
+      if (user.email && !email) setEmail(user.email);
+      if (user.displayName && !name) setName(user.displayName);
+      setIsLogin(false);
+    }
+  }, [isCompletingProfile, user, email, name]);
 
   useEffect(() => {
     // Cleanup recaptcha on unmount
@@ -124,8 +139,10 @@ export default function Login() {
 
     try {
       setIsSubmitting(true);
+      const fullPhone = phone ? `${phoneCode} ${phone}` : '';
+      const fullParentPhone = parentPhone ? `${parentPhoneCode} ${parentPhone}` : '';
       const { isNewUser } = await signInWithGoogle({
-        name, age, school, standard, phone, parentName, parentPhone
+        name, age, school, standard, phone: fullPhone, parentName, parentPhone: fullParentPhone
       });
 
       if (isNewUser) {
@@ -136,27 +153,57 @@ export default function Login() {
         }
       }
     } catch (err: any) {
-      setError(err?.message || 'Google Sign-in failed');
+      if (err?.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, no need to show an error message
+        setError('');
+      } else {
+        setError(err?.message || 'Google Sign-in failed');
+      }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError('Please enter your email address to reset password.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+    setIsResetting(true);
+    try {
+      await resetPassword(email);
+      setSuccess('Password reset link sent to your email.');
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email.');
+      } else {
+        setError(err?.message || 'Failed to send reset link.');
+      }
+    } finally {
+      setIsResetting(false);
     }
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsSubmitting(true);
+    const fullPhone = phone ? `${phoneCode} ${phone}` : '';
+    const fullParentPhone = parentPhone ? `${parentPhoneCode} ${parentPhone}` : '';
+
     try {
-      if (isLogin) {
+      if (isCompletingProfile) {
+        await completeGoogleProfile({
+          name, age, school, standard, phone: fullPhone, parentName, parentPhone: fullParentPhone
+        });
+      } else if (isLogin) {
         await signInWithEmail(email, password);
       } else {
-        if (!isPhoneVerified) {
-          setError('Please verify your phone number with OTP first.');
-          setIsSubmitting(false);
-          return;
-        }
         await signUpWithEmail(email, password, {
-          name, age, school, standard, phone, parentName, parentPhone
+          name, age, school, standard, phone: fullPhone, parentName, parentPhone: fullParentPhone
         });
       }
     } catch (err: any) {
@@ -206,6 +253,12 @@ export default function Login() {
         {error && (
           <div className="mb-6 p-3 bg-red-50 text-red-600 text-sm font-sans rounded-xl border border-red-100 text-center">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-3 bg-emerald-50 text-emerald-600 text-sm font-sans rounded-xl border border-emerald-100 text-center">
+            {success}
           </div>
         )}
 
@@ -272,76 +325,32 @@ export default function Login() {
               <div className="md:col-span-2">
                 <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="phone">Phone Number</label>
                 <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <div className="relative flex-1 flex group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                       <Phone size={18} className="text-slate-400" />
                     </div>
+                    <select
+                      value={phoneCode}
+                      onChange={(e) => setPhoneCode(e.target.value)}
+                      className="pl-10 pr-2 py-3 rounded-l-full border border-gray-200 border-r-0 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm appearance-none min-w-[70px] text-slate-700"
+                    >
+                      <option value="+91">+91</option>
+                      <option value="+1">+1</option>
+                      <option value="+44">+44</option>
+                      <option value="+61">+61</option>
+                    </select>
                     <input
                       id="phone"
                       type="tel"
                       required={!isLogin}
-                      disabled={isPhoneVerified}
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm disabled:bg-slate-50 disabled:text-slate-400"
+                      className="flex-1 w-full pl-3 pr-4 py-3 rounded-r-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
                       placeholder="Your contact number"
                     />
                   </div>
-                  {!isPhoneVerified && !isOtpSent && (
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={isSendingOtp || !phone}
-                      className="px-6 py-3 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-full hover:bg-primary/90 transition-all disabled:opacity-50"
-                    >
-                      {isSendingOtp ? 'Sending...' : 'Send OTP'}
-                    </button>
-                  )}
-                  {isPhoneVerified && (
-                    <div className="flex items-center gap-2 text-emerald-600 px-4">
-                      <CheckCircle2 size={24} />
-                    </div>
-                  )}
                 </div>
               </div>
-
-              {isOtpSent && !isPhoneVerified && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="md:col-span-2 bg-slate-50 p-4 rounded-2xl border border-primary/10"
-                >
-                  <label className="block text-xs font-bold uppercase tracking-widest text-primary mb-3 text-center">Enter Verification Code</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      placeholder="6-digit OTP"
-                      className="flex-1 px-5 py-3 rounded-full border border-gray-200 bg-white focus:ring-2 focus:ring-primary/20 outline-none text-center tracking-[0.5em] font-bold text-lg"
-                      maxLength={6}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleVerifyOtp}
-                      disabled={isVerifyingOtp || otp.length < 6}
-                      className="px-8 py-3 bg-accent text-white rounded-full font-bold hover:bg-accent/90 transition-all disabled:opacity-50 flex items-center justify-center min-w-[120px]"
-                    >
-                      {isVerifyingOtp ? <Loader2 size={20} className="animate-spin" /> : 'Verify'}
-                    </button>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => setIsOtpSent(false)}
-                    className="w-full text-center text-xs text-slate-400 mt-3 hover:text-primary transition-colors"
-                  >
-                    Change phone number
-                  </button>
-                </motion.div>
-              )}
-
-              {/* Hidden container for ReCAPTCHA */}
-              <div id="recaptcha-container"></div>
 
               <div className="md:col-span-2 border-t border-gray-100 pt-4 mt-2">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 ml-1">Parent Information (Optional)</h3>
@@ -361,14 +370,26 @@ export default function Login() {
 
               <div>
                 <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="parentPhone">Parent's Phone</label>
-                <input
-                  id="parentPhone"
-                  type="tel"
-                  value={parentPhone}
-                  onChange={(e) => setParentPhone(e.target.value)}
-                  className="w-full px-5 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
-                  placeholder="Emergency contact"
-                />
+                <div className="relative flex group">
+                  <select
+                    value={parentPhoneCode}
+                    onChange={(e) => setParentPhoneCode(e.target.value)}
+                    className="pl-4 pr-2 py-3 rounded-l-full border border-gray-200 border-r-0 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm appearance-none min-w-[70px] text-slate-700"
+                  >
+                    <option value="+91">+91</option>
+                    <option value="+1">+1</option>
+                    <option value="+44">+44</option>
+                    <option value="+61">+61</option>
+                  </select>
+                  <input
+                    id="parentPhone"
+                    type="tel"
+                    value={parentPhone}
+                    onChange={(e) => setParentPhone(e.target.value)}
+                    className="flex-1 w-full pl-3 pr-4 py-3 rounded-r-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                    placeholder="Emergency contact"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -384,79 +405,125 @@ export default function Login() {
                 type="email"
                 required
                 value={email}
+                disabled={isCompletingProfile}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                className="w-full pl-11 pr-4 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm disabled:text-slate-400"
                 placeholder="Ex. student@example.com"
               />
             </div>
           </div>
           
-          <div className={!isLogin ? 'md:col-span-2' : ''}>
-            <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="password">Password</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Lock size={18} className="text-slate-400" />
+          {!isCompletingProfile && (
+            <div className={!isLogin ? 'md:col-span-2' : ''}>
+              <label className="block text-sm py-1 font-medium text-slate-700 mb-1 ml-1" htmlFor="password">Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock size={18} className="text-slate-400" />
+                </div>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-11 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
+                  placeholder="Enter your password"
+                />
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                  <button
+                    type="button"
+                    onMouseDown={() => setShowPassword(true)}
+                    onMouseUp={() => setShowPassword(false)}
+                    onMouseLeave={() => setShowPassword(false)}
+                    onTouchStart={() => setShowPassword(true)}
+                    onTouchEnd={() => setShowPassword(false)}
+                    className="text-slate-400 hover:text-primary transition-colors focus:outline-none cursor-pointer"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    <Eye size={18} className={showPassword ? "text-primary opacity-100" : "opacity-70"} />
+                  </button>
+                </div>
               </div>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-full border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-sans text-sm"
-                placeholder="Enter your password"
-              />
+              {isLogin && error === 'Invalid email or password.' && (
+                <div className="mt-2 text-right">
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    disabled={isResetting}
+                    className="text-sm font-sans text-primary hover:text-primary/80 transition-colors disabled:opacity-70"
+                  >
+                    {isResetting ? 'Sending...' : 'Forgot password?'}
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           <button
             type="submit"
             disabled={isSubmitting}
             className="w-full py-3.5 px-6 rounded-full bg-primary text-white font-sans font-semibold hover:bg-primary/90 transition-all shadow-md mt-6 disabled:opacity-70"
           >
-            {isSubmitting ? 'Processing...' : isLogin ? 'Sign In' : 'Sign Up'}
+            {isSubmitting ? 'Processing...' : isCompletingProfile ? 'Complete Profile' : isLogin ? 'Sign In' : 'Sign Up'}
           </button>
         </form>
 
-        <div className="relative flex items-center justify-center mb-6">
-          <div className="absolute border-t border-gray-200 w-full" />
-          <div className="bg-white px-4 relative text-sm text-slate-400 font-sans">or</div>
-        </div>
+        {!isCompletingProfile && (
+          <div className="relative flex items-center justify-center mb-6">
+            <div className="absolute border-t border-gray-200 w-full" />
+            <div className="bg-white px-4 relative text-sm text-slate-400 font-sans">or</div>
+          </div>
+        )}
 
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-700 py-3 px-6 rounded-full font-sans font-medium hover:bg-gray-50 transition-all mb-6"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.58c2.08-1.92 3.27-4.74 3.27-8.09z"
-              fill="#4285F4"
-            />
-            <path
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              fill="#34A853"
-            />
-            <path
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              fill="#FBBC05"
-            />
-            <path
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              fill="#EA4335"
-            />
-          </svg>
-          Continue with Google
-        </button>
+        {!isCompletingProfile && (
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-700 py-3 px-6 rounded-full font-sans font-medium hover:bg-gray-50 transition-all mb-6"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.58c2.08-1.92 3.27-4.74 3.27-8.09z"
+                fill="#4285F4"
+              />
+              <path
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                fill="#34A853"
+              />
+              <path
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                fill="#EA4335"
+              />
+            </svg>
+            Continue with Google
+          </button>
+        )}
 
         <div className="text-center">
-          <button 
-            type="button"
-            onClick={() => { setIsLogin(!isLogin); setError(''); }}
-            className="text-sm font-sans font-medium text-accent hover:text-accent/80 transition-colors"
-          >
-            {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-          </button>
+          {!isCompletingProfile && (
+            <button 
+              type="button"
+              onClick={() => { setIsLogin(!isLogin); setError(''); }}
+              className="text-sm font-sans font-medium text-accent hover:text-accent/80 transition-colors"
+            >
+              {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+            </button>
+          )}
+          <div className="text-center mt-4">
+            {user && (
+              <button 
+                type="button"
+                onClick={() => signOut()}
+                className="text-xs font-sans text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                Sign out of current Google Account
+              </button>
+            )}
+          </div>
         </div>
       </motion.div>
     </div>

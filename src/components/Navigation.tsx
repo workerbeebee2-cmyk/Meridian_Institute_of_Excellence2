@@ -61,7 +61,7 @@ export function Navigation() {
             </Link>
           ))}
           
-          {user ? (
+          {(user && profile) ? (
             <div className="flex items-center gap-4">
               <Link 
                 to={role === 'admin' ? '/admin' : '/dashboard'}
@@ -154,7 +154,7 @@ export function Navigation() {
               ))}
               
               <div className="pt-4 flex flex-col gap-4">
-                {user ? (
+                {(user && profile) ? (
                   <>
                     <Link
                       to={role === 'admin' ? '/admin' : '/dashboard'}

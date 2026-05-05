@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -11,7 +11,9 @@ interface AuthContextType {
   signInWithGoogle: (extraData?: any) => Promise<{ isNewUser: boolean }>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, extraData: any) => Promise<void>;
+  completeGoogleProfile: (extraData: any) => Promise<void>;
   updateProfile: (newData: any) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async (extraData?: any) => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
       const result = await signInWithPopup(auth, provider);
       const userRef = doc(db, 'users', result.user.uid);
@@ -85,8 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(data);
         return { isNewUser: false };
       }
-    } catch (error) {
-      console.error("Google Signin Error", error);
+    } catch (error: any) {
+      if (error?.code !== 'auth/popup-closed-by-user') {
+        console.error("Google Signin Error", error);
+      }
       throw error;
     }
   };
@@ -116,6 +121,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const completeGoogleProfile = async (extraData: any) => {
+    if (!user) throw new Error("No user logged in");
+    try {
+      // Clean up undefined fields
+      const cleanData = Object.fromEntries(Object.entries(extraData).filter(([_, v]) => v !== undefined));
+      const newProfile = {
+        email: user.email || '',
+        role: 'student',
+        createdAt: Date.now(),
+        ...cleanData
+      };
+      
+      console.log('Attempting to create profile with data:', newProfile);
+      
+      await setDoc(doc(db, 'users', user.uid), newProfile, { merge: true });
+      setRole('student');
+      setProfile(newProfile);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+    }
+  };
+
   const updateProfile = async (newData: any) => {
     if (!user) return;
     try {
@@ -125,6 +152,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile((prev: any) => ({ ...prev, ...updateData }));
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -138,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, profile, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, updateProfile, signOut }}>
+    <AuthContext.Provider value={{ user, role, profile, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, completeGoogleProfile, updateProfile, resetPassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -24,14 +24,15 @@ service cloud.firestore {
         data.email is string && data.email.size() <= 200 &&
         data.role is string && (data.role == 'student' || data.role == 'admin') &&
         data.createdAt is number &&
-        (!data.keys().contains('name') || (data.name is string && data.name.size() <= 100)) &&
-        (!data.keys().contains('age') || (data.age is string || data.age is number)) &&
-        (!data.keys().contains('school') || (data.school is string && data.school.size() <= 200)) &&
-        (!data.keys().contains('standard') || (data.standard is string && data.standard.size() <= 100)) &&
-        (!data.keys().contains('phone') || (data.phone is string && data.phone.size() <= 20)) &&
-        (!data.keys().contains('parentName') || (data.parentName is string && data.parentName.size() <= 100)) &&
-        (!data.keys().contains('parentPhone') || (data.parentPhone is string && data.parentPhone.size() <= 20)) &&
-        (!data.keys().contains('photo') || (data.photo is string && data.photo.size() <= 1048576)); // 1MB limit for base64 roughly
+        (!('name' in data) || (data.name is string && data.name.size() <= 100)) &&
+        (!('age' in data) || (data.age is string || data.age is number)) &&
+        (!('school' in data) || (data.school is string && data.school.size() <= 200)) &&
+        (!('standard' in data) || (data.standard is string && data.standard.size() <= 100)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('parentName' in data) || (data.parentName is string && data.parentName.size() <= 100)) &&
+        (!('parentPhone' in data) || (data.parentPhone is string && data.parentPhone.size() <= 30)) &&
+        (!('photo' in data) || (data.photo is string && data.photo.size() <= 1048576)) &&
+        (!('updatedAt' in data) || (data.updatedAt is number));
     }
 
     match /users/{userId} {
@@ -44,7 +45,8 @@ service cloud.firestore {
       allow update: if (isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) &&
                     incoming().diff(existing()).affectedKeys().hasOnly([
                       'name', 'age', 'school', 'standard', 'phone', 
-                      'parentName', 'parentPhone', 'photo', 'updatedAt'
+                      'parentName', 'parentPhone', 'photo', 'updatedAt',
+                      'email', 'role', 'createdAt'
                     ])) || isAdmin();
       allow delete: if isAdmin();
     }
