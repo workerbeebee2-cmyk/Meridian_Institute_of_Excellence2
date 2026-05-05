@@ -72,7 +72,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <h4 className="font-bold font-sans text-gray-900 mb-1">Phone</h4>
-                  <p className="font-sans text-slate-500">+91 98765 43210</p>
+                  <p className="font-sans text-slate-500">+91 8638627268</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
