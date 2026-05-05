@@ -17,7 +17,13 @@ interface ProfileModalProps {
   onClose: () => void;
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+const getAi = () => {
+  if (!aiInstance) {
+    aiInstance = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+  }
+  return aiInstance;
+};
 
 export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const { profile, updateProfile } = useAuth();
@@ -139,7 +145,13 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       const mimeType = file.type;
 
       // 2. AI Verification
-      const response = await ai.models.generateContent({
+      if (!process.env.GEMINI_API_KEY) {
+         setVerificationError('GEMINI API Key is missing. Cannot verify photo.');
+         setIsVerifying(false);
+         return;
+      }
+      const aiClient = getAi();
+      const response = await aiClient.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: {
           parts: [
