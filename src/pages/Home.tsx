@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { ChevronRight, Brain, Target, Users, BookOpen, ArrowRight, CheckCircle2, Sparkles, Facebook, Instagram } from 'lucide-react';
+import { ChevronRight, Brain, Target, Users, BookOpen, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { Link } from 'react-router';
 
 export default function Home() {
@@ -84,24 +84,6 @@ export default function Home() {
               <Link to="/about" className="px-8 py-4 md:py-5 rounded-full bg-white text-primary font-sans font-bold hover:bg-gray-50 border border-gray-200 transition-all hover:shadow-lg hover:-translate-y-1">
                 Discover Our Story
               </Link>
-            </motion.div>
-            
-            <motion.div
-              custom={4} initial="hidden" animate="visible" variants={fadeUpVariants}
-              className="flex items-center gap-5"
-            >
-              <a href="#" className="w-12 h-12 rounded-full flex items-center justify-center transition-all text-primary hover:bg-primary/5 hover:-translate-y-1">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>
-              </a>
-              <a href="#" className="w-12 h-12 rounded-full flex items-center justify-center transition-all text-primary hover:bg-primary/5 hover:-translate-y-1">
-                <Instagram size={24} />
-              </a>
-              <a href="#" className="w-12 h-12 rounded-full flex items-center justify-center transition-all text-primary hover:bg-primary/5 hover:-translate-y-1">
-                <Facebook size={24} />
-              </a>
-              <a href="#" className="w-12 h-12 rounded-full flex items-center justify-center transition-all text-primary hover:bg-primary/5 hover:-translate-y-1">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-              </a>
             </motion.div>
           </div>
 
