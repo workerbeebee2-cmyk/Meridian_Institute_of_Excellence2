@@ -100,5 +100,11 @@ service cloud.firestore {
       allow create: if isValidId(contactId) && isValidContact(incoming());
       allow update, delete: if isAdmin();
     }
+
+    // Authorized Admins Whitelist
+    match /authorizedAdmin/{docId} {
+      allow read: if true; 
+      allow write: if isAdmin();
+    }
   }
 }

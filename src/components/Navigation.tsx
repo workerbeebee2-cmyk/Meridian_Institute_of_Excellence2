@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation } from 'react-router';
-import { Menu, X, BookOpen, ChevronRight } from 'lucide-react';
+import { Menu, X, BookOpen, ChevronRight, Lock } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
 
@@ -65,7 +65,7 @@ export function Navigation() {
           {(user && profile) ? (
             <div className="flex items-center gap-4">
               <Link 
-                to={role === 'admin' ? '/admin' : '/dashboard'}
+                to={role === 'admin' ? '/admin-dashboard' : '/dashboard'}
                 className="flex items-center gap-3 pr-2 group"
               >
                 <div className="hidden md:block text-right">
@@ -88,13 +88,18 @@ export function Navigation() {
               </button>
             </div>
           ) : (
-            <Link
-              to="/login"
-              className="font-sans text-sm font-medium px-5 py-2.5 rounded-full transition-all flex items-center gap-2 group bg-primary text-white hover:bg-primary/90"
-            >
-              Student Portal
-              <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className="font-sans text-sm font-medium px-5 py-2.5 rounded-full transition-all flex items-center gap-2 group bg-primary text-white hover:bg-primary/90"
+              >
+                Student Portal
+                <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link to="/admin-login" className="p-2 text-slate-300 hover:text-slate-500 transition-colors" title="Admin Login">
+                <Lock size={14} />
+              </Link>
+            </div>
           )}
         </nav>
 
@@ -159,7 +164,7 @@ export function Navigation() {
                 {(user && profile) ? (
                   <>
                     <Link
-                      to={role === 'admin' ? '/admin' : '/dashboard'}
+                      to={role === 'admin' ? '/admin-dashboard' : '/dashboard'}
                       onClick={() => setMobileMenuOpen(false)}
                       className="font-sans text-center text-base font-medium px-6 py-3 rounded-full bg-primary text-white"
                     >
@@ -176,14 +181,23 @@ export function Navigation() {
                     </button>
                   </>
                 ) : (
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="font-sans flex items-center justify-center gap-2 text-base font-medium px-6 py-3 rounded-full bg-primary text-white"
-                  >
-                    Student Portal
-                    <ChevronRight size={18} />
-                  </Link>
+                  <>
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="font-sans flex items-center justify-center gap-2 text-base font-medium px-6 py-3 rounded-full bg-primary text-white"
+                    >
+                      Student Portal
+                      <ChevronRight size={18} />
+                    </Link>
+                    <Link
+                      to="/admin-login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="font-sans flex items-center justify-center gap-2 text-sm font-medium px-6 py-3 text-slate-500 hover:text-primary transition-colors"
+                    >
+                      <Lock size={14} /> Admin Login
+                    </Link>
+                  </>
                 )}
               </div>
             </nav>
