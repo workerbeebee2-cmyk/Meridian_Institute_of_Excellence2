@@ -125,6 +125,7 @@ export default function Home() {
                     alt="Students experiencing modern education" 
                     className="w-full h-full object-cover"
                     crossOrigin="anonymous"
+                    fetchPriority="high"
                   />
                   <div className="absolute inset-0 bg-primary/5 mix-blend-multiply" />
                 </motion.div>
@@ -337,6 +338,7 @@ export default function Home() {
                   alt="Meridian Cafe" 
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
+                  loading="lazy"
                 />
               </motion.div>
               
@@ -352,6 +354,7 @@ export default function Home() {
                   alt="BookSpace" 
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
+                  loading="lazy"
                 />
               </motion.div>
               

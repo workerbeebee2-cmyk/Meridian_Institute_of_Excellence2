@@ -35,6 +35,7 @@ export function Navigation() {
   src="https://i.ibb.co/84tpLBM9/MIE-LOGO-01.png" 
   alt="Meridian Logo" 
   className="w-10 h-10 rounded-full object-cover"
+  fetchPriority="high"
 />
           <div>
             <h1 className="text-xl md:text-2xl font-bold leading-none tracking-tight text-primary">
@@ -130,6 +131,7 @@ export function Navigation() {
                   src="https://i.ibb.co/84tpLBM9/MIE-LOGO-01.png" 
                   alt="Meridian Logo" 
                   className="w-10 h-10 rounded-full object-cover"
+                  loading="lazy"
                 />
                 <div>
                   <h1 className="text-xl font-bold text-primary leading-none tracking-tight">Meridian</h1>

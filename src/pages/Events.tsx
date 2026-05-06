@@ -76,6 +76,7 @@ export default function Events() {
                   alt={evt.title} 
                   className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 ${evt.isPast ? '' : 'group-hover:scale-105'}`}
                   crossOrigin="anonymous"
+                  loading="lazy"
                 />
                 <div className="absolute top-4 left-4 flex flex-col gap-2">
                   {evt.featured && !evt.isPast && (

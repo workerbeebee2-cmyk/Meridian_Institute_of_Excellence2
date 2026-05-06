@@ -14,6 +14,7 @@ export function Footer() {
   src="https://i.ibb.co/84tpLBM9/MIE-LOGO-01.png" 
   alt="Meridian Logo" 
   className="w-10 h-10 rounded-full object-cover"
+  loading="lazy"
 />
               <div>
                 <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
