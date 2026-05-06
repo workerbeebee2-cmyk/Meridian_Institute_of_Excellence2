@@ -4,20 +4,43 @@ import { MapPin, Phone, Mail, Send } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
+const WEB3FORMS_ACCESS_KEY = '67d0d04b-2703-4bf1-a0af-13317ab347ac';
+
 export default function Contact() {
-  const [formData, setFormData] = React.useState({ name: '', email: '', message: '' });
+  const [formData, setFormData] = React.useState({ name: '', email: '', phone: '', message: '' });
   const [status, setStatus] = React.useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('submitting');
     try {
+      // Save to Firebase
       await addDoc(collection(db, 'contacts'), {
         ...formData,
         createdAt: Date.now()
       });
-      setStatus('success');
-      setFormData({ name: '', email: '', message: '' });
+
+      // Send email via Web3Forms
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_ACCESS_KEY,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          message: formData.message,
+          subject: `New Contact Form Submission from ${formData.name}`,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setStatus('success');
+        setFormData({ name: '', email: '', phone: '', message: '' });
+      } else {
+        setStatus('error');
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'contacts');
       setStatus('error');
@@ -131,6 +154,17 @@ export default function Contact() {
                     onChange={e => setFormData({...formData, email: e.target.value})}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent bg-gray-50/50 font-sans transition-all"
                     placeholder="john@example.com"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium font-sans text-gray-700 mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    value={formData.phone}
+                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent bg-gray-50/50 font-sans transition-all"
+                    placeholder="+91 98765 43210"
                   />
                 </div>
                 <div>
