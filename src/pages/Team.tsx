@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Mail, Linkedin } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 export default function Team() {
   const team = [
@@ -26,6 +27,7 @@ export default function Team() {
 
   return (
     <div className="pt-24 pb-20 min-h-screen bg-background-alt">
+      <SEO title="Our Team" description="Meet the leadership and academic coordinators behind Meridian Institute of Excellence." />
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto mb-20 pt-16 px-6">
         <motion.div 

@@ -4,6 +4,7 @@ import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { BookOpen, CheckCircle, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
+import { SEO } from '../components/SEO';
 
 export default function Courses() {
   const [courses, setCourses] = useState<any[]>([]);
@@ -36,6 +37,7 @@ export default function Courses() {
 
   return (
     <div className="pt-24 pb-20 min-h-screen bg-background">
+      <SEO title="Academic Programs" description="Explore our foundation and pre-university programs in Science, Humanities, and Arts." />
       {/* Header */}
       <div className="bg-primary pt-16 pb-24 text-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center max-w-3xl">

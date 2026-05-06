@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { MapPin, Phone, Mail, Send } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { SEO } from '../components/SEO';
 
 const WEB3FORMS_ACCESS_KEY = '67d0d04b-2703-4bf1-a0af-13317ab347ac';
 
@@ -49,6 +50,7 @@ export default function Contact() {
 
   return (
     <div className="pt-24 pb-20 min-h-screen bg-background-alt">
+      <SEO title="Contact Us" description="Have questions about Meridian Institute of Excellence? Contact us today for admissions or academic program inquiries." />
       <div className="bg-primary pt-16 pb-32 text-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center max-w-3xl">
           <motion.h1 

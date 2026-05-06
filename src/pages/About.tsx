@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Award, Compass, Heart, Lightbulb } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 export default function About() {
   return (
     <div className="pt-24 pb-20 min-h-screen bg-background">
+      <SEO title="About Us" description="Learn about Meridian Institute of Excellence, our history, mission, and core values." />
       <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-16">
         
         {/* Hero Section */}

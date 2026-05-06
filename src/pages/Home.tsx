@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { ChevronRight, Brain, Target, Users, BookOpen, ArrowRight, CheckCircle2, Sparkles, Instagram, Facebook } from 'lucide-react';
 import { Link } from 'react-router';
+import { SEO } from '../components/SEO';
 
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,6 +24,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen" ref={containerRef}>
+      <SEO title="Home - Best Education Hub" />
       {/* 1. Hero Section */}
       <section className="relative min-h-[100vh] flex items-center pt-20 overflow-hidden bg-background">
         <div className="absolute inset-0 z-0 overflow-hidden">

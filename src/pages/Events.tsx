@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Calendar, MapPin, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
+import { SEO } from '../components/SEO';
 
 export default function Events() {
   const events = [
@@ -39,6 +40,7 @@ export default function Events() {
 
   return (
     <div className="pt-24 pb-20 min-h-screen bg-background">
+      <SEO title="Events & Workshops" description="Stay updated with our upcoming events, cultural workshops, and academic fairs." />
       <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-16">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
           <div className="max-w-2xl">
