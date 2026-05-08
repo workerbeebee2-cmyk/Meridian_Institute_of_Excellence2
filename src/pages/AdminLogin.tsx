@@ -29,10 +29,11 @@ export default function AdminLogin() {
       const user = userCredential.user;
 
       // 2. Check authorizedAdmin collection
-      const q = query(collection(db, 'authorizedAdmin'), where('email', '==', user.email));
-      const querySnapshot = await getDocs(q);
+      const { doc, getDoc, setDoc } = await import('firebase/firestore');
+      const authAdminRef = doc(db, 'authorizedAdmin', user.email || '');
+      const authAdminSnap = await getDoc(authAdminRef);
 
-      if (querySnapshot.empty) {
+      if (!authAdminSnap.exists()) {
         // Not authorized
         await signOut(auth);
         setError('You are not authorized to access this portal.');
@@ -41,7 +42,6 @@ export default function AdminLogin() {
       }
 
       // Ensure they have an admin profile in 'users' collection so AuthContext loads them properly
-      const { doc, getDoc, setDoc } = await import('firebase/firestore');
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists() || userSnap.data().role !== 'admin') {
@@ -77,10 +77,11 @@ export default function AdminLogin() {
 
     try {
       // 1. Check if email is in whitelist BEFORE creating user
-      const q = query(collection(db, 'authorizedAdmin'), where('email', '==', email));
-      const querySnapshot = await getDocs(q);
+      const { doc, getDoc, setDoc } = await import('firebase/firestore');
+      const authAdminRef = doc(db, 'authorizedAdmin', email);
+      const authAdminSnap = await getDoc(authAdminRef);
 
-      if (querySnapshot.empty) {
+      if (!authAdminSnap.exists()) {
         setError('You are not authorized to create an admin account.');
         setLoading(false);
         return;
@@ -91,7 +92,6 @@ export default function AdminLogin() {
       const user = userCredential.user;
 
       // 3. Create admin profile in users collection
-      const { doc, setDoc } = await import('firebase/firestore');
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, {
         email: user.email,

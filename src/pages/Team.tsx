@@ -12,7 +12,7 @@ export default function Team() {
       image: "https://i.ibb.co/Q7s5GC0m/image.png"
     },
     {
-      name: "Lt. Col. Dipankar Gogoi",
+      name: "Dipankar Gogoi",
       role: "Advisor",
       bio: "Providing strategic guidance on discipline, leadership, and character building, ensuring our students develop strong moral frameworks alongside academic success.",
       image: "https://i.ibb.co/zTvHg0MM/image.png"

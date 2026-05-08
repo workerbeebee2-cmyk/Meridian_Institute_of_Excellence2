@@ -13,9 +13,17 @@ service cloud.firestore {
     function existing() { return resource.data; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     
+    function isWhitelistedAdmin() {
+      return exists(/databases/$(database)/documents/authorizedAdmin/$(request.auth.token.email));
+    }
+
     // Admin checking: Admin email list (hardcoded for bootstrapping)
     function isAdmin() { 
-      return isSignedIn() && (request.auth.token.email == 'alakesh.boruah010290@gmail.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')); 
+      return isSignedIn() && (
+        request.auth.token.email == 'alakesh.boruah010290@gmail.com' || 
+        isWhitelistedAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      ); 
     }
 
     // User Validation Helper
@@ -40,8 +48,11 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
                     isValidUser(incoming()) && 
-                    // Prevent user from self-assigning admin unless they are the bootstrap admin
-                    (incoming().role == 'student' || (incoming().role == 'admin' && request.auth.token.email == 'alakesh.boruah010290@gmail.com'));
+                    // Prevent user from self-assigning admin unless they are the bootstrap admin or whitelisted
+                    (
+                      incoming().role == 'student' || 
+                      (incoming().role == 'admin' && (request.auth.token.email == 'alakesh.boruah010290@gmail.com' || isWhitelistedAdmin()))
+                    );
       allow update: if (isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) &&
                     incoming().diff(existing()).affectedKeys().hasOnly([
                       'name', 'age', 'school', 'standard', 'phone', 
